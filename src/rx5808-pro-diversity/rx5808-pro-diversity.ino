@@ -1,3 +1,5 @@
+
+
 /*
  * SPI driver based on fs_skyrf_58g-main.c Written by Simon Chambers
  * TVOUT by Myles Metzel
@@ -7,8 +9,8 @@
  * Universal version my Marko Hoepken
  * Diversity Receiver Mode and GUI improvements by Shea Ivey
  * OLED Version by Shea Ivey
- * Seperating display concerns by Shea Ivey
-
+ * Seperating display concerupdateSetupMenuns by Shea Ivey
+USE_DIVERSITY
 The MIT License (MIT)
 
 Copyright (c) 2015 Marko Hoepken
@@ -161,6 +163,13 @@ char call_sign[10];
 bool settings_beeps = true;
 bool settings_orderby_channel = true;
 
+#ifdef USE_VOLTAGE_ALERT
+  uint8_t voltage = 0;
+  bool voltageError = false;
+  uint8_t voltageCounter = 0;
+  uint8_t voltageLimit = 0;
+#endif
+
 // SETUP ----------------------------------------------------------------------------
 void setup()
 {
@@ -226,6 +235,10 @@ void setup()
         EEPROM.write(EEPROM_ADR_RSSI_MAX_B_L,lowByte(RSSI_MAX_VAL));
         EEPROM.write(EEPROM_ADR_RSSI_MAX_B_H,highByte(RSSI_MAX_VAL));
 #endif
+#ifdef USE_VOLTAGE_ALERT
+  EEPROM.write(EEPROM_ADR_RSSI_MAX_B_H, 0);
+#endif
+
     }
 
     // read last setting from eeprom
@@ -251,6 +264,10 @@ void setup()
     rssi_min_b=((EEPROM.read(EEPROM_ADR_RSSI_MIN_B_H)<<8) | (EEPROM.read(EEPROM_ADR_RSSI_MIN_B_L)));
     rssi_max_b=((EEPROM.read(EEPROM_ADR_RSSI_MAX_B_H)<<8) | (EEPROM.read(EEPROM_ADR_RSSI_MAX_B_L)));
 #endif
+
+#ifdef USE_VOLTAGE_ALERT
+    voltageLimit = EEPROM.read(EEPROM_ADR_VOLTAGE_LIMIT);
+#endif
     force_menu_redraw=1;
 
     // Init Display
@@ -273,6 +290,13 @@ void setup()
         diversity_mode = useReceiverAuto;
     }
 #endif
+
+  #ifdef USE_VOLTAGE_ALERT
+    pinMode(VOLTAGE_PIN, INPUT);
+    voltage = readVoltage();
+  #endif
+
+
     // Setup Done - Turn Status LED off.
     digitalWrite(led, LOW);
 
@@ -281,6 +305,37 @@ void setup()
 // LOOP ----------------------------------------------------------------------------
 void loop()
 {
+   #ifdef USE_VOLTAGE_ALERT
+      voltage = readVoltage();
+      if(voltage < voltageLimit){
+        if(voltageCounter > 5 ){
+           if(digitalRead(buttonUp) == HIGH && digitalRead(buttonDown) == HIGH){
+              drawScreen.voltageAlert();
+              voltageError = true;
+              return; 
+           }else{
+            voltageCounter = 0;
+            voltageError = false;
+            voltageLimit = 0;
+            last_state = 255;
+            delay(1000); // timeout delay
+           }
+           
+        }else{
+          voltageCounter++;
+        }
+      }else{
+        if(voltageError){
+          last_state = 255;
+        }
+        voltageCounter = 0;
+        voltageError = false;
+      }
+      
+      
+   #endif
+
+  
     /*******************/
     /*   Mode Select   */
     /*******************/
@@ -506,12 +561,16 @@ void loop()
                 EEPROM.write(EEPROM_ADR_STATE,state_last_used);
                 EEPROM.write(EEPROM_ADR_BEEP,settings_beeps);
                 EEPROM.write(EEPROM_ADR_ORDERBY,settings_orderby_channel);
+                EEPROM.write(EEPROM_ADR_VOLTAGE_LIMIT,settings_orderby_channel);
                 // save call sign
                 for(uint8_t i = 0;i<sizeof(call_sign);i++) {
                     EEPROM.write(EEPROM_ADR_CALLSIGN+i,call_sign[i]);
                 }
 #ifdef USE_DIVERSITY
                 EEPROM.write(EEPROM_ADR_DIVERSITY,diversity_mode);
+#endif
+#ifdef USE_VOLTAGE_ALERT
+                EEPROM.write(EEPROM_ADR_VOLTAGE_LIMIT,voltageLimit);
 #endif
                 drawScreen.save(state_last_used, channelIndex, pgm_read_word_near(channelFreqTable + channelIndex), call_sign);
                 for (uint8_t loop=0;loop<5;loop++)
@@ -539,7 +598,23 @@ void loop()
 #else
         drawScreen.screenSaver(pgm_read_byte_near(channelNames + channelIndex), pgm_read_word_near(channelFreqTable + channelIndex), call_sign);
 #endif
-        do{
+       do{
+         #ifdef USE_VOLTAGE_ALERT
+            drawScreen.updateSceenSaverVoltage(voltage);
+            voltage = readVoltage();
+            if(voltage < voltageLimit){
+              if(voltageCounter > 5){
+                 drawScreen.voltageAlert();
+                 voltageError = true;
+                 return;
+              }else{
+                voltageCounter++;
+              }
+            }else{
+              voltageCounter = 0;
+            }
+            #endif  
+          
             rssi = readRSSI();
 
 #ifdef USE_DIVERSITY
@@ -547,7 +622,6 @@ void loop()
 #else
             drawScreen.updateScreenSaver(rssi);
 #endif
-
         }
         while((digitalRead(buttonMode) == HIGH) && (digitalRead(buttonUp) == HIGH) && (digitalRead(buttonDown) == HIGH)); // wait for next button press
         state=state_last_used;
@@ -822,7 +896,7 @@ void loop()
         int editing = -1;
         do{
             in_menu_time_out=50;
-            drawScreen.updateSetupMenu(menu_id, settings_beeps, settings_orderby_channel, call_sign, editing);
+            drawScreen.updateSetupMenu(menu_id, settings_beeps, settings_orderby_channel, call_sign, voltageLimit, editing);
             while(--in_menu_time_out && ((digitalRead(buttonMode) == HIGH) && (digitalRead(buttonUp) == HIGH) && (digitalRead(buttonDown) == HIGH))) // wait for next key press or time out
             {
                 delay(100); // timeout delay
@@ -864,6 +938,9 @@ void loop()
                         in_menu = 0; // save & exit menu
                         state=STATE_SAVE;
                         break;
+                    case 5:
+                        editing = editing == 0 ? -1 : 0;
+                        break;
                 }
             }
             else if(digitalRead(buttonUp) == LOW) {
@@ -875,9 +952,11 @@ void loop()
                     }
 #endif
                 }
-                else { // change current letter in place
+                else if(menu_id == 4) { // change current letter in place
                     call_sign[editing]++;
                     call_sign[editing] > '}' ? call_sign[editing] = ' ' : false; // loop to oter end
+                }else if(menu_id == 5 && voltageLimit < 200 && voltageLimit < voltage - 5) { // 
+                    voltageLimit++;
                 }
 
             }
@@ -891,17 +970,19 @@ void loop()
                     }
 #endif
                 }
-                else { // change current letter in place
+                else if(menu_id == 4){ // change current letter in place
                     call_sign[editing]--;
                     call_sign[editing] < ' ' ? call_sign[editing] = '}' : false; // loop to oter end
+                }else if(menu_id == 5 && voltageLimit > 0) { // 
+                    voltageLimit--;
                 }
             }
 
-            if(menu_id > 4) {
+            if(menu_id > 5) {
                 menu_id = 0;
             }
             if(menu_id < 0) {
-                menu_id = 4;
+                menu_id = 5;
             }
 
             beep(50); // beep & debounce
@@ -951,6 +1032,14 @@ void beep(uint16_t time)
     digitalWrite(led, LOW);
     digitalWrite(buzzer, HIGH);
 }
+
+#ifdef USE_VOLTAGE_ALERT
+  uint8_t readVoltage()
+  {
+    uint16_t value = analogRead(VOLTAGE_PIN);
+    return ((value * 5 * VOLTAGE_MULTIPLE) / 1024.0) * 10; // 55 = 5.5V
+  }
+#endif
 
 uint8_t channel_from_index(uint8_t channelIndex)
 {

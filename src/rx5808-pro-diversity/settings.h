@@ -40,11 +40,11 @@ SOFTWARE.
 
 // this will be displayed on the screensaver.
 // Up to 10 letters
-#define CALL_SIGN "CALL SIGN"
+#define CALL_SIGN "Error414"
 
 // Feature Togglels
 #define USE_DIVERSITY
-#define USE_IR_EMITTER
+//#define USE_IR_EMITTER
 //#define USE_FLIP_SCREEN
 #define USE_BOOT_LOGO
 // Choose if you wish to use 8 additional Channels 
@@ -83,11 +83,18 @@ SOFTWARE.
     #define DIVERSITY_MAX_CHECKS 5
 #endif
 
+
+#define USE_VOLTAGE_ALERT 1
+#ifdef USE_VOLTAGE_ALERT
+  #define VOLTAGE_PIN A2
+  #define VOLTAGE_MULTIPLE 4 //  R2 / R1
+#endif
+
 // this two are minimum required
-#define buttonUp 2
+#define buttonUp 4
 #define buttonMode 3
 // optional comfort buttons
-#define buttonDown 4
+#define buttonDown 2
 #define buttonSave 5
 // Buzzer
 #define buzzer 6
@@ -123,7 +130,7 @@ SOFTWARE.
 #define STATE_SCREEN_SAVER 8
 
 // Seconds to wait before force entering screensaver
-#define SCREENSAVER_TIMEOUT 30
+#define SCREENSAVER_TIMEOUT 5
 
 #define START_STATE STATE_SEEK
 #define MAX_STATE STATE_MANUAL
@@ -173,8 +180,13 @@ SOFTWARE.
     #define isDiversity() (analogRead(rssiPinB) >= 5)
 #endif
 
+
 #define EEPROM_ADR_BEEP 11
 #define EEPROM_ADR_ORDERBY 12
 #define EEPROM_ADR_CALLSIGN 20
+
+#ifdef USE_VOLTAGE_ALERT
+  #define EEPROM_ADR_VOLTAGE_LIMIT 40
+#endif
 
 #endif // file_defined

@@ -403,6 +403,7 @@ void screens::updateBandScanMode(bool in_setup, uint8_t channel, uint8_t rssi, u
 void screens::screenSaver(uint8_t channelName, uint16_t channelFrequency, const char *call_sign) {
     screenSaver(-1, channelName, channelFrequency, call_sign);
 }
+
 void screens::screenSaver(uint8_t diversity_mode, uint8_t channelName, uint16_t channelFrequency, const char *call_sign) {
     reset();
     display.setTextSize(6);
@@ -447,6 +448,16 @@ void screens::screenSaver(uint8_t diversity_mode, uint8_t channelName, uint16_t 
 void screens::updateScreenSaver(uint8_t rssi) {
     updateScreenSaver(-1, rssi, -1, -1);
 }
+#ifdef USE_VOLTAGE_ALERT
+  void screens::updateSceenSaverVoltage(uint8_t voltage){
+    display.setTextColor(WHITE);
+    display.fillRect(70, 9, display.width() - 70, 8, BLACK);
+    display.setCursor(70,9);
+    display.print(String((float)voltage/10.0, 1) + "V");
+    display.display();
+  }
+#endif
+
 void screens::updateScreenSaver(char active_receiver, uint8_t rssi, uint8_t rssiA, uint8_t rssiB) {
 #ifdef USE_DIVERSITY
     if(isDiversity()) {
@@ -572,58 +583,92 @@ void screens::updateDiversity(char active_receiver, uint8_t rssiA, uint8_t rssiB
 }
 #endif
 
+#ifdef USE_VOLTAGE_ALERT
+  void screens::voltageAlert() {
+  
+      reset();
+      drawTitleBox(PSTR2("LOW VOLTAGE"));
+
+      display.fillTriangle(35, 60, 85, 60, 60, 15, WHITE);
+      display.fillRect(57, 23, 7 , 26, BLACK);
+      display.fillCircle(60, 55, 4, BLACK);
+      
+      display.display();
+  }
+#endif
+
 
 void screens::setupMenu(){
 }
-void screens::updateSetupMenu(uint8_t menu_id, bool settings_beeps, bool settings_orderby_channel, const char *call_sign, char editing){
+void screens::updateSetupMenu(uint8_t menu_id, bool settings_beeps, bool settings_orderby_channel, const char *call_sign, uint8_t voltage_alert, char editing){
     reset();
+    
     drawTitleBox(PSTR2("SETUP MENU"));
     //selected
-    display.fillRect(0, 10*menu_id+12, display.width(), 10, WHITE);
 
-    display.setTextColor(menu_id == 0 ? BLACK : WHITE);
-    display.setCursor(5,10*1+3);
-    display.print(PSTR2("ORDER: "));
-    if(settings_orderby_channel) {
-        display.print(PSTR2("CHANNEL  "));
-    }
-    else {
-        display.print(PSTR2("FREQUENCY"));
-    }
-
-    display.setTextColor(menu_id == 1 ? BLACK : WHITE);
-    display.setCursor(5,10*2+3);
-    display.print(PSTR2("BEEPS: "));
-    if(settings_beeps) {
-        display.print(PSTR2("ON "));
-    }
-    else {
-        display.print(PSTR2("OFF"));
-    }
-
-
-    display.setTextColor(menu_id == 2 ? BLACK : WHITE);
-    display.setCursor(5,10*3+3);
-    display.print(PSTR2("SIGN : "));
-    if(editing>=0) {
-        display.fillRect(6*6+5, 10*2+13, display.width()-(6*6+6), 8, BLACK);
-        display.fillRect(6*7+6*(editing)+4, 10*2+13, 7, 8, WHITE); //set cursor
-        for(uint8_t i=0; i<10; i++) {
-            display.setTextColor(i == editing ? BLACK : WHITE);
-            display.print(call_sign[i]);
+    if(menu_id <= 4){ // first page
+        display.fillRect(0, 10*menu_id+12, display.width(), 10, WHITE);
+        display.setTextColor(menu_id == 0 ? BLACK : WHITE);
+        display.setCursor(5,10*1+3);
+        display.print(PSTR2("ORDER: "));
+        if(settings_orderby_channel) {
+            display.print(PSTR2("CHANNEL  "));
+        }
+        else {
+            display.print(PSTR2("FREQUENCY"));
+        }
+    
+        display.setTextColor(menu_id == 1 ? BLACK : WHITE);
+        display.setCursor(5,10*2+3);
+        display.print(PSTR2("BEEPS: "));
+        if(settings_beeps) {
+            display.print(PSTR2("ON "));
+        }
+        else {
+            display.print(PSTR2("OFF"));
+        }
+    
+    
+        display.setTextColor(menu_id == 2 ? BLACK : WHITE);
+        display.setCursor(5,10*3+3);
+        display.print(PSTR2("SIGN : "));
+        if(editing>=0) {
+            display.fillRect(6*6+5, 10*2+13, display.width()-(6*6+6), 8, BLACK);
+            display.fillRect(6*7+6*(editing)+4, 10*2+13, 7, 8, WHITE); //set cursor
+            for(uint8_t i=0; i<10; i++) {
+                display.setTextColor(i == editing ? BLACK : WHITE);
+                display.print(call_sign[i]);
+            }
+        }
+        else {
+            display.print(call_sign);
+        }
+    
+        display.setTextColor(menu_id == 3 ? BLACK : WHITE);
+        display.setCursor(5,10*4+3);
+        display.print(PSTR2("CALIBRATE RSSI"));
+    
+        display.setTextColor(menu_id == 4 ? BLACK : WHITE);
+        display.setCursor(5,10*5+3);
+        display.print(PSTR2("SAVE & EXIT"));
+    }else{ //second page
+        display.fillRect(0, 10*(menu_id - 5)+12, display.width(), 10, WHITE);
+        display.setTextColor(menu_id == 5 ? BLACK : WHITE);
+        display.setCursor(5,10*1+3);
+        display.print(PSTR2("VOLTAGE LIMIT: "));
+        
+        if(editing == 0 && menu_id == 5) {
+          display.fillRect(85, 10*(menu_id - 5)+10, 40, 12, BLACK);
+          display.setTextColor(WHITE);
+        }
+        
+        if(voltage_alert > 0){
+          display.print(String((float)voltage_alert / 10.0, 1));
+        }else{
+          display.print(PSTR2("OFF"));
         }
     }
-    else {
-        display.print(call_sign);
-    }
-
-    display.setTextColor(menu_id == 3 ? BLACK : WHITE);
-    display.setCursor(5,10*4+3);
-    display.print(PSTR2("CALIBRATE RSSI"));
-
-    display.setTextColor(menu_id == 4 ? BLACK : WHITE);
-    display.setCursor(5,10*5+3);
-    display.print(PSTR2("SAVE & EXIT"));
+    
     display.display();
 }
 
