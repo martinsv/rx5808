@@ -73,7 +73,7 @@ class screens
 
         // VOLTAGE
         void voltageAlert();
-        void updateSceenSaverVoltage(uint8_t voltage);          
+        void updateSceenSaverVoltage(uint8_t voltage, bool isAlert);          
 
         // SETUP MENU
         void setupMenu();

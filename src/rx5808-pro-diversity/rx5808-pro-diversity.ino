@@ -179,7 +179,7 @@ void setup()
     digitalWrite(led, HIGH);
     // buzzer
     pinMode(buzzer, OUTPUT); // Feedback buzzer (active buzzer, not passive piezo)
-    digitalWrite(buzzer, HIGH);
+    digitalWrite(buzzer, LOW);
     // minimum control pins
     pinMode(buttonUp, INPUT);
     digitalWrite(buttonUp, INPUT_PULLUP);
@@ -311,6 +311,7 @@ void loop()
         if(voltageCounter > 5 ){
            if(digitalRead(buttonUp) == HIGH && digitalRead(buttonDown) == HIGH){
               drawScreen.voltageAlert();
+              beep(UP_BEEP);
               voltageError = true;
               return; 
            }else{
@@ -345,9 +346,9 @@ void loop()
     if (digitalRead(buttonMode) == LOW) // key pressed ?
     {
         time_screen_saver=0;
-        beep(50); // beep & debounce
+        //beep(50); // beep & debounce
         delay(KEY_DEBOUNCE/2); // debounce
-        beep(50); // beep & debounce
+        //beep(50); // beep & debounce
         delay(KEY_DEBOUNCE/2); // debounce
 
         uint8_t press_time=0;
@@ -435,9 +436,9 @@ void loop()
                     state=state_last_used; // exit to last state on timeout.
                 }
                 in_menu=0; // EXIT
-                beep(KEY_DEBOUNCE/2); // beep & debounce
+                //beep(KEY_DEBOUNCE/2); // beep & debounce
                 delay(50); // debounce
-                beep(KEY_DEBOUNCE/2); // beep & debounce
+                //beep(KEY_DEBOUNCE/2); // beep & debounce
                 delay(50); // debounce
             }
             else // no timeout, must be keypressed
@@ -466,7 +467,7 @@ void loop()
                     menu_id = MAX_MENU;
                 }
                 in_menu_time_out=50;
-                beep(50); // beep & debounce
+                //beep(50); // beep & debounce
                 delay(KEY_DEBOUNCE); // debounce
             }
         } while(in_menu);
@@ -561,7 +562,7 @@ void loop()
                 EEPROM.write(EEPROM_ADR_STATE,state_last_used);
                 EEPROM.write(EEPROM_ADR_BEEP,settings_beeps);
                 EEPROM.write(EEPROM_ADR_ORDERBY,settings_orderby_channel);
-                EEPROM.write(EEPROM_ADR_VOLTAGE_LIMIT,settings_orderby_channel);
+                EEPROM.write(EEPROM_ADR_VOLTAGE_LIMIT, voltageLimit);
                 // save call sign
                 for(uint8_t i = 0;i<sizeof(call_sign);i++) {
                     EEPROM.write(EEPROM_ADR_CALLSIGN+i,call_sign[i]);
@@ -600,7 +601,11 @@ void loop()
 #endif
        do{
          #ifdef USE_VOLTAGE_ALERT
-            drawScreen.updateSceenSaverVoltage(voltage);
+            drawScreen.updateSceenSaverVoltage(voltage, voltageLimit > voltage - 3);
+            if(voltageLimit - 3 < voltage && millis()%2500 < 125)
+            {
+                beep(UP_BEEP);
+            }
             voltage = readVoltage();
             if(voltage < voltageLimit){
               if(voltageCounter > 5){
@@ -1026,11 +1031,11 @@ void beep(uint16_t time)
 {
     digitalWrite(led, HIGH);
     if(settings_beeps){
-        digitalWrite(buzzer, LOW); // activate beep
+        digitalWrite(buzzer, HIGH); // activate beep
     }
     delay(time/2);
     digitalWrite(led, LOW);
-    digitalWrite(buzzer, HIGH);
+    digitalWrite(buzzer, LOW);
 }
 
 #ifdef USE_VOLTAGE_ALERT

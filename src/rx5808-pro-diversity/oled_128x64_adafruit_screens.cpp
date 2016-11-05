@@ -449,8 +449,14 @@ void screens::updateScreenSaver(uint8_t rssi) {
     updateScreenSaver(-1, rssi, -1, -1);
 }
 #ifdef USE_VOLTAGE_ALERT
-  void screens::updateSceenSaverVoltage(uint8_t voltage){
-    display.setTextColor(WHITE);
+  void screens::updateSceenSaverVoltage(uint8_t voltage, bool isAlert){
+    if(isAlert)
+    {
+        display.setTextColor((millis()%250 < 125) ? WHITE : BLACK, BLACK);
+    }else{
+        display.setTextColor(WHITE);
+    }
+    
     display.fillRect(70, 9, display.width() - 70, 8, BLACK);
     display.setCursor(70,9);
     display.print(String((float)voltage/10.0, 1) + "V");

@@ -56,7 +56,7 @@ SOFTWARE.
 // used for tuning time
 #define rx5808
 //#define rx5880
-
+#define UP_BEEP 100
 
 #define spiDataPin 10
 #define slaveSelectPin 11
