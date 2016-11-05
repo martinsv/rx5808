@@ -602,7 +602,7 @@ void loop()
        do{
          #ifdef USE_VOLTAGE_ALERT
             drawScreen.updateSceenSaverVoltage(voltage, voltageLimit > voltage - 3);
-            if(voltageLimit - 3 < voltage && millis()%2500 < 125)
+            if(voltageLimit > voltage - 3 && millis()%2500 < 125)
             {
                 beep(UP_BEEP);
             }
@@ -668,7 +668,7 @@ void loop()
             if(menu_id < 0) {
                 menu_id = useReceiverB;
             }
-            beep(50); // beep & debounce
+            //beep(50); // beep & debounce
             delay(KEY_DEBOUNCE); // debounce
         }
         while(in_menu);
@@ -699,7 +699,7 @@ void loop()
             if( digitalRead(buttonUp) == LOW)        // channel UP
             {
                 time_screen_saver=millis();
-                beep(50); // beep & debounce
+                //beep(50); // beep & debounce
                 delay(KEY_DEBOUNCE); // debounce
                 channelIndex++;
                 channel++;
@@ -712,7 +712,7 @@ void loop()
             if( digitalRead(buttonDown) == LOW) // channel DOWN
             {
                 time_screen_saver=millis();
-                beep(50); // beep & debounce
+               //beep(50); // beep & debounce
                 delay(KEY_DEBOUNCE); // debounce
                 channelIndex--;
                 channel--;
@@ -782,7 +782,7 @@ void loop()
                 else {
                     seek_direction = -1;
                 }
-                beep(50); // beep & debounce
+                //beep(50); // beep & debounce
                 delay(KEY_DEBOUNCE); // debounce
                 force_seek=1;
                 seek_found=0;
@@ -873,14 +873,14 @@ void loop()
                     }
 #endif
                     state=EEPROM.read(EEPROM_ADR_STATE);
-                    beep(1000);
+                    //beep(1000);
                 }
             }
         }
         // new scan possible by press scan
         if (digitalRead(buttonUp) == LOW) // force new full new scan
         {
-            beep(50); // beep & debounce
+            //beep(50); // beep & debounce
             delay(KEY_DEBOUNCE); // debounce
             last_state=255; // force redraw by fake state change ;-)
             channel=CHANNEL_MIN;
@@ -960,7 +960,7 @@ void loop()
                 else if(menu_id == 4) { // change current letter in place
                     call_sign[editing]++;
                     call_sign[editing] > '}' ? call_sign[editing] = ' ' : false; // loop to oter end
-                }else if(menu_id == 5 && voltageLimit < 200 && voltageLimit < voltage - 5) { // 
+                }else if(menu_id == 5 && voltageLimit < 200 && voltageLimit < voltage - 2) { // 
                     voltageLimit++;
                 }
 
@@ -990,7 +990,7 @@ void loop()
                 menu_id = 5;
             }
 
-            beep(50); // beep & debounce
+            //beep(50); // beep & debounce
             do{
                 delay(150);// wait for button release
             }
